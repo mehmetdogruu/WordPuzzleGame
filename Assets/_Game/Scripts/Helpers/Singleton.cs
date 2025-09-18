@@ -1,25 +1,28 @@
 using UnityEngine;
 
-public abstract class PersistentSingleton<T> : MonoBehaviour where T : MonoBehaviour
+namespace Helpers
 {
-    public static T Instance { get; private set; }
-
-    protected virtual void Awake()
+    public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this as T;
-        DontDestroyOnLoad(gameObject);
-    }
-}
+        private static T _instance;
+        public static bool InstanceExists => _instance != null;
 
-public abstract class SceneSingleton<T> : MonoBehaviour where T : MonoBehaviour
-{
-    public static T Instance { get; private set; }
 
-    protected virtual void Awake()
-    {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
-        Instance = this as T;
-        // Sahne yaþam döngüsüne baðlý, DontDestroyOnLoad YOK
+        public static T Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = FindObjectOfType<T>();
+                    if (_instance == null)
+                    {
+                        Debug.LogError("An instance of " + typeof(T)?.ToString() + " is needed in the scene, but there is none.");
+                    }
+                }
+
+                return _instance;
+            }
+        }
     }
 }

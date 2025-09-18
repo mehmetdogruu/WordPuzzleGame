@@ -1,73 +1,79 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UISystem;
 
-public class WinUIController : MonoBehaviour
+public class WinUIController : UIController<WinUIController>
 {
     [Header("UI Refs")]
-    public CanvasGroup root;          // Win panel (CanvasGroup)
-    public TMP_Text titleText;        // "Yeni En Yüksek Skor!" / "Level Tamamlandý"
-    public TMP_Text scoreText;        // "Score: 123"
-    public Button nextLevelButton;    // Next Level
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text scoreText;
+    [SerializeField] private Button menuButton;          // ArtÄ±k "Menu" butonu
+
+    [Header("Main Menu")]
+    [SerializeField] private GameObject mainMenuPanel;   // Ana menÃ¼ panel
+    [SerializeField] private CanvasGroup mainMenuCanvas; // (opsiyonel)
 
     [Header("FX (opsiyonel)")]
-    public ParticleSystem highScoreFX;
-    public ParticleSystem normalEndFX;
+    [SerializeField] private ParticleSystem highScoreFX;
+    [SerializeField] private ParticleSystem normalEndFX;
 
-    // Dahili state
-    private int _pendingNextLevel = 0;
+    private int _pendingNextLevel;
 
-    void Awake()
+    protected override void Awake()
     {
-        SetVisible(false);
-        if (nextLevelButton) nextLevelButton.onClick.AddListener(OnNextLevelClicked);
+        base.Awake(); // _canvas ve _group burada ayarlanÄ±yor
+        if (menuButton) menuButton.onClick.AddListener(OnMenuClicked);
     }
 
+    /// <summary>
+    /// Kazanma ekranÄ±nÄ± skor ve highscore bilgileriyle gÃ¶sterir.
+    /// </summary>
     public void ShowWin(int totalScore, bool isNewHigh, int nextLevelNumber)
     {
         _pendingNextLevel = nextLevelNumber;
 
         if (titleText)
-            titleText.text = isNewHigh ? "Yeni En Yüksek Skor!" : "Level Tamamlandý";
+            titleText.text = isNewHigh ? "Yeni En YÃ¼ksek Skor!" : "Level TamamlandÄ±";
+
         if (scoreText)
             scoreText.text = $"Score: {totalScore}";
 
-        //if (isNewHigh) { if (normalEndFX) normalEndFX.Stop(); if (highScoreFX) highScoreFX.Play(); }
-        //else { if (highScoreFX) highScoreFX.Stop(); if (normalEndFX) normalEndFX.Play(); }
+        // âœ… High Score / Level kilidi artÄ±k GameFlowManager tarafÄ±ndan yazÄ±lÄ±yor.
+        // Burada sadece efekt ve UI aÃ§ma iÅŸlemleri yapÄ±lÄ±r.
 
-        SetVisible(true);
+        if (highScoreFX) highScoreFX.gameObject.SetActive(isNewHigh);
+        if (normalEndFX) normalEndFX.gameObject.SetActive(!isNewHigh);
+
+        Show(); // UIController.Show()
     }
 
-    public void Hide() => SetVisible(false);
 
-    private void SetVisible(bool show)
+    private void OnMenuClicked()
     {
-        if (!root) return;
-        root.alpha = show ? 1f : 0f;
-        root.blocksRaycasts = show;
-        root.interactable = show;
-    }
-
-    private void OnNextLevelClicked()
-    {
-        // 1) Skoru sýfýrla
+        // Skor/holder temizliÄŸi
         ScoreManager.Instance?.ResetScore();
-
-        // 2) LetterHolder’larý temizle (varsa)
         LetterHolderManager.Instance?.ClearAllHoldersImmediate();
 
-        // 3) Bir sonraki level’ý yükle
-        if (LevelManager.Instance != null)
+        // Win paneli kapat
+        Hide();
+
+        // Ana menÃ¼yÃ¼ aÃ§
+        if (mainMenuCanvas)
         {
-            LevelManager.Instance.BuildLevel(_pendingNextLevel);
-            GameFlowManager.Instance?.SetCurrentLevel(_pendingNextLevel);
+            mainMenuCanvas.alpha = 1f;
+            mainMenuCanvas.blocksRaycasts = true;
+            mainMenuCanvas.interactable = true;
+            if (!mainMenuCanvas.gameObject.activeSelf)
+                mainMenuCanvas.gameObject.SetActive(true);
+        }
+        else if (mainMenuPanel)
+        {
+            mainMenuPanel.SetActive(true);
         }
         else
         {
-            Debug.LogError("LevelManager bulunamadý. Next level yüklenemedi.");
+            Debug.LogWarning("WinUIController: mainMenuPanel / mainMenuCanvas atanmadÄ±.");
         }
-
-        // 4) Win UI kapat
-        Hide();
     }
 }

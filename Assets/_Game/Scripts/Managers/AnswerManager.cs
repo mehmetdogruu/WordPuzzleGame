@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Helpers;
 
-public class AnswerManager : SceneSingleton<AnswerManager>
+public class AnswerManager : Singleton<AnswerManager>
 {
     [Header("Dictionary")]
     [Tooltip("Resources içindeki sözlük dosyası yolu (uzantısız).")]
@@ -22,9 +23,8 @@ public class AnswerManager : SceneSingleton<AnswerManager>
     private HashSet<string> _words;    // tam eşleşme kümesi
     private HashSet<string> _prefixes; // önek kümesi (performans için)
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
         LoadDictionary();
     }
 

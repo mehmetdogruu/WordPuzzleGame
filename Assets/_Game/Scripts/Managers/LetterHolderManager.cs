@@ -1,11 +1,12 @@
 ﻿using UnityEngine;
 using DG.Tweening;
+using Helpers;
 
 /// <summary>
 /// LetterHolder'ları yönetir: rezerv (yalnızca _insertCursor), commit ve geri dönüş (return).
 /// Return animasyonları sırasında input'u kilitler.
 /// </summary>
-public class LetterHolderManager : SceneSingleton<LetterHolderManager>
+public class LetterHolderManager : Singleton<LetterHolderManager>
 {
     [Header("UI Refs")]
     [Tooltip("Board üzerindeki tüm tile'ların parent'ı (UI). DOAnchorPos için referans uzay.")]
@@ -30,9 +31,8 @@ public class LetterHolderManager : SceneSingleton<LetterHolderManager>
     public bool InputLocked => inputLocked;
 
     // ====================== LIFECYCLE ======================
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
 
         // Dizi sırasını slotIndex ile senkronla (güvence)
         if (holders != null)

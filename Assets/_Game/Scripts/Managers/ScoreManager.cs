@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Helpers;
 
-public class ScoreManager : SceneSingleton<ScoreManager>
+public class ScoreManager : Singleton<ScoreManager>
 {
     [Header("Runtime/Debug")]
     [SerializeField] private int _totalScore = 0;
@@ -12,9 +13,8 @@ public class ScoreManager : SceneSingleton<ScoreManager>
     // --- Harf puan tablosu ---
     private Dictionary<char, int> _letterPoints;
 
-    protected override void Awake()
+    private void Awake()
     {
-        base.Awake();
         BuildLetterPoints();
     }
 

@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Helpers;
 
-public class BoardManager : SceneSingleton<BoardManager>
+public class BoardManager : Singleton<BoardManager>
 {
     [Header("Algılama")]
     public float overlapDx = 14f;

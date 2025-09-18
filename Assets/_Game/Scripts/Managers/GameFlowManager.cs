@@ -1,36 +1,59 @@
 ﻿using UnityEngine;
 using TMPro;
+using Helpers;
 
-public class GameFlowManager : SceneSingleton<GameFlowManager>
+public class GameFlowManager : Singleton<GameFlowManager>
 {
     [Header("Refs")]
     public WinUIController winUI;   // Inspector’dan ata
 
     [Header("Level")]
     public int currentLevelNumber = 1; // LevelManager ile senkron tut
+    public int CurrentLevelNumber => currentLevelNumber;
 
     // BoardManager.CheckEndIfNoTiles() burayı çağıracak
     public void OnLevelCompletedNoTiles()
     {
-        int total = ScoreManager.Instance != null ? ScoreManager.Instance.TotalScore : 0;
+        int totalScore = ScoreManager.InstanceExists ? ScoreManager.Instance.TotalScore : 0;
 
-        string hsKey = $"HighScore_{currentLevelNumber}";
-        int prev = PlayerPrefs.GetInt(hsKey, 0);
-        bool isNewHigh = total > prev;
-        if (isNewHigh) { PlayerPrefs.SetInt(hsKey, total); PlayerPrefs.Save(); }
+        // İlerlemeyi kaydet
+        bool isNewHigh = Progress.TryUpdateHighScore(CurrentLevelNumber, totalScore);
+        Progress.SetMaxCompletedIfGreater(CurrentLevelNumber);
 
-        int nextLevel = currentLevelNumber + 1;
+        // Level listesi (popup) anında güncellensin
+        if (LevelPopupController.Instance != null)
+            LevelPopupController.Instance.Refresh();
 
-        Debug.Log($"[GameFlow] Level bitti. total={total}, newHigh={isNewHigh}, next={nextLevel}"); // 🔎
+        int nextLevel = CurrentLevelNumber + 1;
+        Debug.Log($"[GameFlow] Level {CurrentLevelNumber} bitti. total={totalScore}, newHigh={isNewHigh}, nextPlayable={nextLevel}");
 
         if (winUI == null)
         {
-            Debug.LogError("[GameFlow] winUI referansı atanmadı! Win UI açılamaz.");
+            Debug.LogError("[GameFlow] winUI referansı atanmadı!");
             return;
         }
 
-        winUI.ShowWin(total, isNewHigh, nextLevel);
+        winUI.ShowWin(totalScore, isNewHigh, nextLevel);
     }
+
+    //private bool SaveWinProgress(int currentLevel, int totalScore)
+    //{
+    //    // High Score (tek anahtar: level_{N}_highscore)
+    //    string hsKey = LevelPopupController.HighScoreKey(currentLevel);
+    //    int oldHS = PlayerPrefs.GetInt(hsKey, 0);
+    //    bool isNewHigh = totalScore > oldHS;
+    //    if (isNewHigh)
+    //        PlayerPrefs.SetInt(hsKey, totalScore);
+
+    //    // En yüksek tamamlanan level (tek anahtar: max_completed_level)
+    //    int maxCompleted = PlayerPrefs.GetInt(LevelPopupController.Key_MaxCompleted, 0);
+    //    if (currentLevel > maxCompleted)
+    //        PlayerPrefs.SetInt(LevelPopupController.Key_MaxCompleted, currentLevel);
+
+    //    PlayerPrefs.Save();
+    //    return isNewHigh;
+    //}
+
 
 
     // LevelManager BuildLevel’den sonra çağırmak için yardımcı (Inspector’dan da tetiklenebilir)

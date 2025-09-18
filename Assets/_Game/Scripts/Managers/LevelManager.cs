@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using Helpers;
 
-public class LevelManager : PersistentSingleton<LevelManager>
+public class LevelManager : Singleton<LevelManager>
 {
     [Header("Level")]
     public int levelNumber = 1;
