@@ -17,7 +17,7 @@ public class LetterHolderManager : Singleton<LetterHolderManager>
 
     [Header("Anim")]
     [Tooltip("Geri dönüş hız sabiti (px/sn).")]
-    public float returnSpeed = 900f;
+    public float returnSpeed = 3000f;
 
     [Tooltip("Geri dönüş easing'i.")]
     public Ease returnEase = Ease.Linear;
@@ -280,5 +280,95 @@ public class LetterHolderManager : Singleton<LetterHolderManager>
 
         // Cevabı yeniden hesaplat (boş)
         AnswerManager.Instance?.RecomputeCurrentAnswer(holders);
+    }
+    public void TweenTileToHolderNoLock(TileViewController tv, float speed = 900f, Ease ease = Ease.OutCubic)
+    {
+        if (tv == null || boardRoot == null) return;
+
+        // Hedef slotu rezerve etmeyi dene
+        if (!TryReserveAtCursor(out int slotIndex, out LetterHolderController holder))
+            return; // slot doluysa bekle, input kilitlenmedi; kullanıcı başka taş seçebilir
+
+        // Kaynak pozisyonu ve hedefi hazırla
+        var rt = (RectTransform)tv.transform;
+        Vector2 sourcePos = rt.anchoredPosition;
+        Vector2 targetPos = GetTargetPosInBoardSpace(holder);
+
+        // YALNIZCA bu tile'ın raycast'ini kapat (global input açık kalsın)
+        tv.SetRaycastEnabled(false);
+        if (tv.button) tv.button.interactable = false;
+
+        // Holder'a gidiş tween'i (kilit YOK)
+        float dist = Vector2.Distance(sourcePos, targetPos);
+        float dur = Mathf.Max(0.05f, dist / Mathf.Max(1f, speed));
+
+        // Holder'a inişten önce incoming'i hazırla (güvence)
+        var info = new HeldTileInfo
+        {
+            tileIndex = tv.tileIndex,
+            tileId = tv.tileId,
+            letter = tv.letter,
+            wasOpen = tv.frontFace != null && tv.frontFace.activeSelf,
+            sourceAnchoredPos = sourcePos,
+            sourceParent = (RectTransform)tv.transform.parent,
+            view = tv
+        };
+        holder.SetIncoming(info);
+
+        rt.DOAnchorPos(targetPos, dur)
+          .SetEase(ease)
+          .OnComplete(() =>
+          {
+          // Holder'a yerleşmeyi tamamla ve cursor'ı ilerlet
+          Commit(slotIndex, tv, sourcePos);
+
+          // Board mantığını güncelle (alive/indegree/open)
+          BoardManager.Instance?.OnTilePickingBegin(tv.tileIndex);
+          // Not: OnTilePickingBegin zaten indegree ve open'ları güncelliyor
+      });
+    }
+    public int GetRightmostOccupiedIndex()
+    {
+        if (holders == null) return -1;
+        for (int i = holders.Length - 1; i >= 0; i--)
+        {
+            var h = holders[i];
+            if (h != null && h.IsOccupied && h.Current != null)
+                return i;
+        }
+        return -1;
+    }
+
+    public bool HasAnyOccupied()
+    {
+        return GetRightmostOccupiedIndex() >= 0;
+    }
+
+    // Tek hamlelik “undo”: en sağdaki dolu holder’daki harfi board’a geri gönderir
+    public void UndoLastMove()
+    {
+        if (holders == null) return;
+
+        int idx = GetRightmostOccupiedIndex();
+        if (idx < 0) return; // iade edilecek bir şey yok
+
+        // Yeni yerleşimler bu indexten başlayabilsin (cursor’ı buraya getir)
+        _insertCursor = idx;
+
+        // Geri dönüş süresince input kilitle (sadece return animasyonu boyunca)
+        SetInputLock(true);
+
+        var h = holders[idx];
+        // Mevcut ReturnOne(…) zaten:
+        // - tween’i yapıyor
+        // - holder.Release()
+        // - tile’ın raycast’ini açıyor
+        // - BoardManager.OnTileReturned(...) çağırıyor
+        // - AnswerManager.RecomputeCurrentAnswer(...) çağırıyor
+        ReturnOne(h, () =>
+        {
+            // Hepsi bitince inputu aç
+            SetInputLock(false);
+        });
     }
 }

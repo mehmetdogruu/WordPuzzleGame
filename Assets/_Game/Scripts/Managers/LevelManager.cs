@@ -88,6 +88,8 @@ public class LevelManager : Singleton<LevelManager>
         // 5) GameFlow için seviye bilgisi ve answer reset
         GameFlowManager.Instance?.SetCurrentLevel(levelNumber);
         AnswerManager.Instance?.RecomputeCurrentAnswer(null);
+        AnswerManager.Instance?.OnLevelStarted(levelNumber);
+
     }
 
 

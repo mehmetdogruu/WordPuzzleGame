@@ -23,6 +23,8 @@ public class BoardManager : Singleton<BoardManager>
     private readonly HashSet<int> _picked = new();
     private readonly HashSet<int> _inFlight = new();
 
+
+
     private enum Mode { A, B, Geometric }
     private Mode _mode;
 
@@ -137,12 +139,28 @@ public class BoardManager : Singleton<BoardManager>
         if (!IsValidIndex(tileIndex)) return;
         var view = _views[tileIndex];
         if (!view) return;
-
-        if (_picked.Contains(tileIndex)) return; // holder'da açık kalsın
+        if (_picked.Contains(tileIndex)) return;
         if (!_alive[tileIndex]) return;
 
-        view.SetOpen(_indegree[tileIndex] == 0);
+        bool shouldOpen = _indegree[tileIndex] == 0;
+
+        // İlk kez görüyorsak: animasyonsuz gerçek state ver
+        if (view.IsCurrentlyOpen == null)
+        {
+            view.IsCurrentlyOpen = shouldOpen;
+            view.SetOpen(shouldOpen);
+            return;
+        }
+
+        // Sonraki refresh’lerde sadece değişirse animasyon
+        if (view.IsCurrentlyOpen.Value != shouldOpen)
+        {
+            view.IsCurrentlyOpen = shouldOpen;
+            if (shouldOpen) view.AnimateOpen();
+            else view.AnimateClose();
+        }
     }
+
 
     private bool IsValidIndex(int i) => _views != null && i >= 0 && i < _views.Count;
 

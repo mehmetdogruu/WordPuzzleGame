@@ -19,13 +19,30 @@ public class AnswerManager : Singleton<AnswerManager>
     public string CurrentAnswer => _currentAnswer;
     public bool IsCurrentValid => _isCurrentValid;
 
-
+    // --- sözlük ---
     private HashSet<string> _words;    // tam eşleşme kümesi
     private HashSet<string> _prefixes; // önek kümesi (performans için)
+
+    // --- DUPLICATE KONTROL: level-bazlı kayıt ---
+    private int _currentLevelCache = -1;
+    private readonly HashSet<string> _submittedThisLevel = new HashSet<string>(); // UPPERCASE
 
     private void Awake()
     {
         LoadDictionary();
+    }
+
+    /// <summary>Level değiştiğinde çağır. Bu level için submit edilen kelimeler temizlenir.</summary>
+    public void OnLevelStarted(int levelNumber)
+    {
+        if (levelNumber != _currentLevelCache)
+        {
+            _currentLevelCache = levelNumber;
+            _submittedThisLevel.Clear();
+#if UNITY_EDITOR
+            Debug.Log($"[AnswerManager] Level {levelNumber} başladı → submit geçmişi temizlendi.");
+#endif
+        }
     }
 
     void LoadDictionary()
@@ -78,11 +95,31 @@ public class AnswerManager : Singleton<AnswerManager>
     }
 
     /// <summary>
-    /// Geçerli kelimeyi submit eder: debug'a yazar ve holder'lardaki harfleri yok eder.
+    /// Geçerli kelimeyi submit eder: aynı level içinde aynı kelime ikinci kez submit edilemez.
     /// </summary>
     public void SubmitCurrentWord()
     {
         if (!_isCurrentValid) return;
+
+        // Level numarasını yakala (GameFlow yoksa cache'i kullan)
+        int lvl = GameFlowManager.Instance != null
+                    ? GameFlowManager.Instance.CurrentLevelNumber
+                    : _currentLevelCache;
+
+        // güvence: cache'lenmiş level yanlışsa resetle
+        if (lvl != _currentLevelCache) OnLevelStarted(lvl);
+
+        string upper = _currentAnswer.ToUpperInvariant();
+
+        // 🔒 aynı levelda tekrar submit engeli
+        if (_submittedThisLevel.Contains(upper))
+        {
+            Debug.Log($"[AnswerManager] \"{upper}\" zaten bu levelda submit edildi. Yoksayılıyor.");
+            return;
+        }
+
+        // kayıt altına al
+        _submittedThisLevel.Add(upper);
 
         Debug.Log($"SUBMIT: \"{_currentAnswer}\"");
 
@@ -91,16 +128,31 @@ public class AnswerManager : Singleton<AnswerManager>
 
         // Harfleri tüket ve cevabı sıfırla
         int count = 0;
-        foreach (var h in LetterHolderManager.Instance.holders)
+        var lhm = LetterHolderManager.Instance;
+        if (lhm != null && lhm.holders != null)
         {
-            if (h == null || !h.IsOccupied || h.Current == null) break;
-            count++;
+            foreach (var h in lhm.holders)
+            {
+                if (h == null || !h.IsOccupied || h.Current == null) break;
+                count++;
+            }
+            // Projende ConsumeFromStart varsa onu kullan; yoksa ClearAllHoldersImmediate çağır.
+            if (count > 0)
+            {
+                if (lhm.GetType().GetMethod("ConsumeFromStart") != null)
+                    lhm.ConsumeFromStart(count);
+                else
+                    lhm.ClearAllHoldersImmediate();
+            }
         }
 
-        LetterHolderManager.Instance.ConsumeFromStart(count);
         SetAnswer("", false);
         BoardManager.Instance?.CheckEndAfterSubmit();
-
+    }
+    public bool IsAlreadySubmittedThisLevel(string word)
+    {
+        if (string.IsNullOrEmpty(word)) return false;
+        return _submittedThisLevel != null && _submittedThisLevel.Contains(word.ToUpperInvariant());
     }
 
     public void ForceNotify()

@@ -64,16 +64,24 @@ public class SubmitButtonController : MonoBehaviour
     // 🔴 Yalnızca currentAnswer değiştiğinde çağrılır
     void HandleAnswerChanged(string word, bool isValid)
     {
-        if (isValid)
+        bool canSubmit = false;
+        int ptsToShow = 0;
+
+        if (isValid && AnswerManager.Instance != null)
         {
-            // anlık kelime puanı
-            int pts = ScoreManager.Instance != null ? ScoreManager.Instance.ComputeWordScore(word) : 0;
-            ApplyState(true, $"{pts} pts");
+            // Aynı level’da bu kelime daha önce submit edildiyse buton kapalı
+            bool already = AnswerManager.Instance.IsAlreadySubmittedThisLevel(word);
+            if (!already)
+            {
+                canSubmit = true;
+                ptsToShow = ScoreManager.Instance != null ? ScoreManager.Instance.ComputeWordScore(word) : 0;
+            }
         }
+
+        if (canSubmit)
+            ApplyState(true, $"{ptsToShow} pts");
         else
-        {
-            ApplyState(false, "");
-        }
+            ApplyState(false, ""); // kilitliyken skor yazma
     }
 
     void ApplyState(bool interactable, string label)
@@ -95,8 +103,9 @@ public class SubmitButtonController : MonoBehaviour
 
     void OnSubmitClicked()
     {
-        // güvenlik: sadece geçerliyse submit
-        if (AnswerManager.Instance != null && AnswerManager.Instance.IsCurrentValid)
-            AnswerManager.Instance.SubmitCurrentWord();
+        // güvenlik: sadece geçerliyse ve duplicate değilse submit
+        var am = AnswerManager.Instance;
+        if (am != null && am.IsCurrentValid && !am.IsAlreadySubmittedThisLevel(am.CurrentAnswer))
+            am.SubmitCurrentWord();
     }
 }
