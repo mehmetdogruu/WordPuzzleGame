@@ -35,15 +35,14 @@ public class AnswerManager : Singleton<AnswerManager>
     /// <summary>Level değiştiğinde çağır. Bu level için submit edilen kelimeler temizlenir.</summary>
     public void OnLevelStarted(int levelNumber)
     {
-        if (levelNumber != _currentLevelCache)
-        {
-            _currentLevelCache = levelNumber;
-            _submittedThisLevel.Clear();
+        // ✅ Her başlatışta sıfırla (level değişmiş olsa da olmasa da)
+        _currentLevelCache = levelNumber;
+        _submittedThisLevel.Clear();
 #if UNITY_EDITOR
-            Debug.Log($"[AnswerManager] Level {levelNumber} başladı → submit geçmişi temizlendi.");
+        Debug.Log($"[AnswerManager] Level {levelNumber} başladı → submit geçmişi temizlendi.");
 #endif
-        }
     }
+
 
     void LoadDictionary()
     {

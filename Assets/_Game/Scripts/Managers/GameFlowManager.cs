@@ -4,9 +4,6 @@ using Helpers;
 
 public class GameFlowManager : Singleton<GameFlowManager>
 {
-    [Header("Refs")]
-    public WinUIController winUI;   // Inspector’dan ata
-
     [Header("Level")]
     public int currentLevelNumber = 1; // LevelManager ile senkron tut
     public int CurrentLevelNumber => currentLevelNumber;
@@ -27,13 +24,14 @@ public class GameFlowManager : Singleton<GameFlowManager>
         int nextLevel = CurrentLevelNumber + 1;
         Debug.Log($"[GameFlow] Level {CurrentLevelNumber} bitti. total={totalScore}, newHigh={isNewHigh}, nextPlayable={nextLevel}");
 
-        if (winUI == null)
+        if (WinUIController.Instance == null)
         {
             Debug.LogError("[GameFlow] winUI referansı atanmadı!");
             return;
         }
 
-        winUI.ShowWin(totalScore, isNewHigh, nextLevel);
+        WinUIController.Instance.ShowWin(totalScore, isNewHigh, nextLevel);
+        GamePanelController.Instance.Hide();
     }
 
     //private bool SaveWinProgress(int currentLevel, int totalScore)

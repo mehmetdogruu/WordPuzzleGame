@@ -6,10 +6,11 @@ using TMPro;
 public class LevelListItem : MonoBehaviour
 {
     [Header("UI Refs")]
-    [SerializeField] private TMP_Text titleText;     // "Level 1 - ANIMALS"
-    [SerializeField] private TMP_Text highScoreText; // "High Score: 999"
-    [SerializeField] private Button playButton;      // yeşil Play
-    [SerializeField] private GameObject lockGroup;   // kilitli ise görünen gri grup
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text highScoreText;
+    public Button playButton;
+    public GameObject lockImage;
+    public TMP_Text playText;
 
     private int _level;
     private Action<int> _onPlay;
@@ -24,18 +25,19 @@ public class LevelListItem : MonoBehaviour
 
         if (playButton)
         {
-            // Sadece tıklanabilirliğini değiştir
             playButton.interactable = !isLocked;
             playButton.onClick.RemoveAllListeners();
-            playButton.onClick.AddListener(() => _onPlay?.Invoke(_level));
-            // ❌ Artık SetActive ile kapatmıyoruz
-            // playButton.gameObject.SetActive(!isLocked);
-        }
+            playButton.onClick.AddListener(() =>
+            {
+                // Önce mevcut onPlay callback’i (level yükleme vb.)
+                _onPlay?.Invoke(_level);
 
-        //if (lockGroup) lockGroup.SetActive(isLocked);
+                // ✅ Ardından GamePanel’i aç
+                GamePanelController.Instance?.Show();
+            });
+        }
     }
 
-    // İstersen runtime'da skor güncellemek için:
     public void SetHighScore(int value)
     {
         if (highScoreText) highScoreText.text = value > 0 ? $"High Score: {value}" : "High Score:";

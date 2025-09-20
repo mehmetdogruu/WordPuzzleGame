@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,89 +9,92 @@ public class LevelPopupController : UIController<LevelPopupController>
 {
     [Header("UI")]
     [SerializeField] private Transform content;          // ScrollView/Content
-    [SerializeField] private LevelListItem itemPrefab;   // tek satýr prefab
+    [SerializeField] private LevelListItem itemPrefab;   // tek satÄ±r prefab
     [SerializeField] private Button closeButton;         // X butonu
-    [SerializeField] private bool buildOnStart = true;   // oyun baþlarken oluþtur
+    [SerializeField] private bool buildOnStart = true;   // oyun baÅŸlarken oluÅŸtur
 
     [Header("Progress")]
-    [Tooltip("Baþlangýçta açýk olacak ilk level")]
+    [Tooltip("BaÅŸlangÄ±Ã§ta aÃ§Ä±k olacak ilk level")]
     [SerializeField] private int firstUnlockedLevel = 1;
 
 
-    // DOÐRU regex
+    // DOÄžRU regex
     private readonly Regex _rxNum = new Regex(@"level_(\d+)", RegexOptions.IgnoreCase);
 
-    // Oluþturulan item’larý ve level numaralarýný hafýzada tutalým
+    // OluÅŸturulan itemâ€™larÄ± ve level numaralarÄ±nÄ± hafÄ±zada tutalÄ±m
     private readonly List<(int level, LevelListItem item)> _items = new();
-    private readonly List<int> _levels = new(); // sýralý level listesi
+    private readonly List<int> _levels = new(); // sÄ±ralÄ± level listesi
     private bool _built = false;
 
     protected override void Awake()
     {
-        base.Awake(); // _canvas, _group
+        base.Awake();
         if (closeButton) closeButton.onClick.AddListener(Close);
-        HideInstant(); // popup baþlangýçta kapalý
+        HideInstant();                 // âœ… aÃ§Ä±lÄ±ÅŸta gizli
     }
 
-    private void Start()
+    void Start()
     {
         if (buildOnStart)
         {
             BuildOrRebuildItems();
-            // görünür yapmýyoruz — sadece hazýrla
-            HideInstant();
+            // Show();   // âŒ istemiyoruz
         }
     }
 
     public void Open()
     {
         if (!_built) BuildOrRebuildItems();
-        RefreshRuntimeStates(); // HighScore/Kilit durumlarýný güncelle
-        Show();                 // UIController.Show()
+        RefreshRuntimeStates();
+        Show();
     }
 
-    public void Close() => Hide();
+    public void Close()
+    {
+        Hide();
+        MainMenuController.Instance.Show();
+    }
 
     // --- Items kurulum ---
     private void BuildOrRebuildItems()
     {
-        // Güvenlik
+        // GÃ¼venlik
         if (!content)
         {
-            Debug.LogError("[LevelPopup] Content atanmadý.");
+            Debug.LogError("[LevelPopup] Content atanmadÄ±.");
             return;
         }
         if (!itemPrefab)
         {
-            Debug.LogError("[LevelPopup] itemPrefab atanmadý.");
+            Debug.LogError("[LevelPopup] itemPrefab atanmadÄ±.");
             return;
         }
 
-        // Eski çocuklarý temizle
+        // Eski Ã§ocuklarÄ± temizle
         for (int i = content.childCount - 1; i >= 0; i--)
             Destroy(content.GetChild(i).gameObject);
         _items.Clear();
         _levels.Clear();
 
-        // 1) Resources/Levels altýndaki bütün JSON dosyalarý
+        // 1) Resources/Levels altÄ±ndaki bÃ¼tÃ¼n JSON dosyalarÄ±
         var all = Resources.LoadAll<TextAsset>("Levels");
         if (all == null || all.Length == 0)
-            Debug.LogWarning("[LevelPopup] Resources/Levels altýnda TextAsset bulunamadý.");
+            Debug.LogWarning("[LevelPopup] Resources/Levels altÄ±nda TextAsset bulunamadÄ±.");
 
-        // 2) Dosya adlarýndan level numaralarýný çek
+        // 2) Dosya adlarÄ±ndan level numaralarÄ±nÄ± Ã§ek
         foreach (var ta in all)
         {
             var m = _rxNum.Match(ta.name);
             if (m.Success && int.TryParse(m.Groups[1].Value, out int num))
                 _levels.Add(num);
         }
-        _levels.Sort(); // küçükten büyüðe
+        _levels.Sort(); // kÃ¼Ã§Ã¼kten bÃ¼yÃ¼ÄŸe
 
-        // 3) Ýlerleme bilgisi
+        // 3) Ä°lerleme bilgisi
         int maxCompleted = Progress.GetMaxCompleted(firstUnlockedLevel);
         int maxPlayable = Progress.GetMaxPlayable(firstUnlockedLevel);
 
-        // 4) Prefab’leri üret ve doldur
+        // 4) Prefabâ€™leri Ã¼ret ve doldur
         foreach (int levelNum in _levels)
         {
             var item = Instantiate(itemPrefab, content, false);
@@ -120,7 +123,7 @@ public class LevelPopupController : UIController<LevelPopupController>
                   $"maxCompleted={maxCompleted}, maxPlayable={maxPlayable}");
     }
 
-    // Her açýlýþta skor/kilit bilgilerini güncelle (item’larý yeniden yaratmadan)
+    // Her aÃ§Ä±lÄ±ÅŸta skor/kilit bilgilerini gÃ¼ncelle (itemâ€™larÄ± yeniden yaratmadan)
     private void RefreshRuntimeStates()
     {
         int maxCompleted = Progress.GetMaxCompleted(firstUnlockedLevel);
@@ -128,14 +131,25 @@ public class LevelPopupController : UIController<LevelPopupController>
 
         foreach (var (levelNum, item) in _items)
         {
-            // High score güncelle
+            // High score gÃ¼ncelle
             int hs = PlayerPrefs.GetInt(Progress.HighScoreKey(levelNum), 0);
             item.SetHighScore(hs);
 
             // Kilit durumu
             bool isLocked = levelNum > maxPlayable;
+            if (isLocked)
+            {
+                item.lockImage.SetActive(true);
+                item.playText.text = "";
+            }
+            else
+            {
+                item.lockImage.SetActive(false);
+                item.playText.text = "Play";
 
-            // Tüm deðerleri tekrar uygula (title deðiþmediði için ayný string)
+            }
+
+            // TÃ¼m deÄŸerleri tekrar uygula (title deÄŸiÅŸmediÄŸi iÃ§in aynÄ± string)
             item.Setup(levelNum, $"LEVEL {levelNum}", hs, isLocked, HandlePlayClicked);
         }
     }
@@ -143,11 +157,11 @@ public class LevelPopupController : UIController<LevelPopupController>
     public void Refresh()
     {
         if (!_built)
-            BuildOrRebuildItems();   // hiç kurulmadýysa oluþtur
+            BuildOrRebuildItems();   // hiÃ§ kurulmadÄ±ysa oluÅŸtur
 
-        RefreshRuntimeStates();      // skor & kilitleri güncelle
+        RefreshRuntimeStates();      // skor & kilitleri gÃ¼ncelle
 
-        // (Ýsteðe baðlý) açýksa layout’u tazele
+        // (Ä°steÄŸe baÄŸlÄ±) aÃ§Ä±ksa layoutâ€™u tazele
         LayoutRebuilder.ForceRebuildLayoutImmediate(content as RectTransform);
     }
     private (int maxCompleted, int maxPlayable) ReadProgress()
@@ -160,27 +174,27 @@ public class LevelPopupController : UIController<LevelPopupController>
 
     //private void MigrateOldPrefsIfNeeded()
     //{
-    //    // Eðer daha önce "max_unlocked_level" yazdýysan ve yeni anahtar yoksa migrate et
+    //    // EÄŸer daha Ã¶nce "max_unlocked_level" yazdÄ±ysan ve yeni anahtar yoksa migrate et
     //    const string OLD = "max_unlocked_level";
     //    if (!PlayerPrefs.HasKey(Key_MaxUnlocked) && PlayerPrefs.HasKey(OLD))
     //    {
-    //        int oldUnlocked = PlayerPrefs.GetInt(OLD, firstUnlockedLevel); // bu "oynanabilir en yüksek" idi
+    //        int oldUnlocked = PlayerPrefs.GetInt(OLD, firstUnlockedLevel); // bu "oynanabilir en yÃ¼ksek" idi
     //        int derivedLastCompleted = Mathf.Max(firstUnlockedLevel - 1, oldUnlocked - 1);
     //        PlayerPrefs.SetInt(Key_MaxUnlocked, derivedLastCompleted);
     //        PlayerPrefs.Save();
     //    }
     //}
 
-    // --- Play akýþý ---
+    // --- Play akÄ±ÅŸÄ± ---
     private void HandlePlayClicked(int levelNumber)
     {
         Hide();
 
-        // skor/holder temizliði
+        // skor/holder temizliÄŸi
         if (ScoreManager.InstanceExists) ScoreManager.Instance.ResetScore();
         if (LetterHolderManager.InstanceExists) LetterHolderManager.Instance.ClearAllHoldersImmediate();
 
-        // level yükle
+        // level yÃ¼kle
         LevelManager.Instance?.BuildLevel(levelNumber);
         GameFlowManager.Instance?.SetCurrentLevel(levelNumber);
     }

@@ -371,4 +371,15 @@ public class LetterHolderManager : Singleton<LetterHolderManager>
             SetInputLock(false);
         });
     }
+    public void ResetAll()
+    {
+        // Tüm holderları anında boşalt
+        ClearAllHoldersImmediate();
+
+        // Cursor'ı başa getir
+        _insertCursor = 0;
+
+        // Cevabı yeniden hesapla (boş)
+        AnswerManager.Instance?.RecomputeCurrentAnswer(holders);
+    }
 }

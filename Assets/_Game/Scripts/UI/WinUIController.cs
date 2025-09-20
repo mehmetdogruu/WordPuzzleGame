@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using TMPro;
 using UISystem;
+using Helpers;
 
 public class WinUIController : UIController<WinUIController>
 {
@@ -15,8 +16,8 @@ public class WinUIController : UIController<WinUIController>
     [SerializeField] private CanvasGroup mainMenuCanvas; // (opsiyonel)
 
     [Header("FX (opsiyonel)")]
-    [SerializeField] private ParticleSystem highScoreFX;
-    [SerializeField] private ParticleSystem normalEndFX;
+    [SerializeField] private ParticleSystem[] highScoreFX;
+    [SerializeField] private ParticleSystem[] normalEndFX;
 
     private int _pendingNextLevel;
 
@@ -34,7 +35,7 @@ public class WinUIController : UIController<WinUIController>
         _pendingNextLevel = nextLevelNumber;
 
         if (titleText)
-            titleText.text = isNewHigh ? "Yeni En Yüksek Skor!" : "Level Tamamlandı";
+            titleText.text = isNewHigh ? "NEW HIGH SCORE!" : "Level Completed";
 
         if (scoreText)
             scoreText.text = $"Score: {totalScore}";
@@ -42,10 +43,10 @@ public class WinUIController : UIController<WinUIController>
         // ✅ High Score / Level kilidi artık GameFlowManager tarafından yazılıyor.
         // Burada sadece efekt ve UI açma işlemleri yapılır.
 
-        if (highScoreFX) highScoreFX.gameObject.SetActive(isNewHigh);
-        if (normalEndFX) normalEndFX.gameObject.SetActive(!isNewHigh);
 
         Show(); // UIController.Show()
+        if (isNewHigh) TriggerParticles(highScoreFX);
+        else TriggerParticles(normalEndFX);
     }
 
 
@@ -74,6 +75,16 @@ public class WinUIController : UIController<WinUIController>
         else
         {
             Debug.LogWarning("WinUIController: mainMenuPanel / mainMenuCanvas atanmadı.");
+        }
+    }
+    private void TriggerParticles(ParticleSystem[] particles)
+    {
+      
+        {
+            foreach (var item in particles)
+            {
+                item.Play();
+            }
         }
     }
 }
