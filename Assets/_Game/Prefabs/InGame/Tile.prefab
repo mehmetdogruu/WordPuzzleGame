@@ -487,7 +487,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 3000
-  ease: 1
+  ease: 4
 --- !u!114 &1781885559246954444
 MonoBehaviour:
   m_ObjectHideFlags: 0

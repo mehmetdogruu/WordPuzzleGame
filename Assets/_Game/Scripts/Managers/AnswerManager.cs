@@ -5,44 +5,40 @@ using Helpers;
 public class AnswerManager : Singleton<AnswerManager>
 {
     [Header("Dictionary")]
-    [Tooltip("Resources içindeki sözlük dosyası yolu (uzantısız).")]
     public string dictionaryResourcePath = "_Game/WordDictionary";
-    [Tooltip("Sözlükte min. kelime uzunluğu")]
     public int minWordLength = 2;
 
     [Header("Runtime/Debug")]
-    [SerializeField] private string _currentAnswer = "";
-    [SerializeField] private bool _isCurrentValid = false;
+    [SerializeField] string _currentAnswer = "";
+    [SerializeField] bool _isCurrentValid = false;
 
     public System.Action<string, bool> OnAnswerChanged;
-
     public string CurrentAnswer => _currentAnswer;
     public bool IsCurrentValid => _isCurrentValid;
 
-    // --- sözlük ---
-    private HashSet<string> _words;    // tam eşleşme kümesi
-    private HashSet<string> _prefixes; // önek kümesi (performans için)
+    HashSet<string> _words;
+    HashSet<string> _prefixes;
 
-    // --- DUPLICATE KONTROL: level-bazlı kayıt ---
-    private int _currentLevelCache = -1;
-    private readonly HashSet<string> _submittedThisLevel = new HashSet<string>(); // UPPERCASE
+    int _currentLevelCache = -1;
+    readonly HashSet<string> _submittedThisLevel = new();   // AutoSolver için güvenli yardımcı API
+    public bool IsWord(string w)
+        => !string.IsNullOrEmpty(w) && _words != null && _words.Contains(w.ToUpperInvariant());
 
-    private void Awake()
-    {
-        LoadDictionary();
-    }
+    public bool IsPrefix(string p)
+        => !string.IsNullOrEmpty(p) && _prefixes != null && _prefixes.Contains(p.ToUpperInvariant());
 
-    /// <summary>Level değiştiğinde çağır. Bu level için submit edilen kelimeler temizlenir.</summary>
+    public int MinWordLength => minWordLength;
+
+    void Awake() => LoadDictionary();
+
     public void OnLevelStarted(int levelNumber)
     {
-        // ✅ Her başlatışta sıfırla (level değişmiş olsa da olmasa da)
         _currentLevelCache = levelNumber;
         _submittedThisLevel.Clear();
 #if UNITY_EDITOR
         Debug.Log($"[AnswerManager] Level {levelNumber} başladı → submit geçmişi temizlendi.");
 #endif
     }
-
 
     void LoadDictionary()
     {
@@ -57,7 +53,7 @@ public class AnswerManager : Singleton<AnswerManager>
             var w = raw.Trim().ToUpperInvariant();
             if (w.Length == 0) continue;
             _words.Add(w);
-            for (int i = 1; i <= w.Length; i++) _prefixes.Add(w.Substring(0, i));
+            for (int i = 1; i <= w.Length; i++) _prefixes.Add(w[..i]);
         }
         Debug.Log($"AnswerManager: {_words.Count} kelime yüklendi.");
     }
@@ -67,95 +63,74 @@ public class AnswerManager : Singleton<AnswerManager>
         if (holders == null || holders.Length == 0) { SetAnswer("", false); return; }
 
         var sb = new System.Text.StringBuilder();
-        for (int i = 0; i < holders.Length; i++)
+        foreach (var h in holders)
         {
-            var h = holders[i];
             if (h == null || !h.IsOccupied || h.Current == null) break;
             sb.Append(char.ToUpperInvariant(h.Current.letter));
         }
 
         string word = sb.ToString();
-        bool valid = word.Length >= minWordLength && _words.Contains(word);
-        SetAnswer(word, valid);
+        bool ok = word.Length >= minWordLength && _words.Contains(word);
+        SetAnswer(word, ok);
     }
 
-    private void SetAnswer(string word, bool valid)
+    void SetAnswer(string word, bool valid)
     {
-        // sadece değiştiyse event at
         if (_currentAnswer == word && _isCurrentValid == valid) return;
-
         _currentAnswer = word;
         _isCurrentValid = valid;
-
         OnAnswerChanged?.Invoke(_currentAnswer, _isCurrentValid);
-
-        if (valid)
-            Debug.Log($"Anlamlı kelime oluşturuldu:\"{_currentAnswer}\"");
+        if (valid) Debug.Log($"Kelime:\"{_currentAnswer}\"");
     }
 
-    /// <summary>
-    /// Geçerli kelimeyi submit eder: aynı level içinde aynı kelime ikinci kez submit edilemez.
-    /// </summary>
     public void SubmitCurrentWord()
     {
         if (!_isCurrentValid) return;
 
-        // Level numarasını yakala (GameFlow yoksa cache'i kullan)
-        int lvl = GameFlowManager.Instance != null
-                    ? GameFlowManager.Instance.CurrentLevelNumber
-                    : _currentLevelCache;
-
-        // güvence: cache'lenmiş level yanlışsa resetle
+        int lvl = GameFlowManager.Instance ? GameFlowManager.Instance.CurrentLevelNumber : _currentLevelCache;
         if (lvl != _currentLevelCache) OnLevelStarted(lvl);
 
         string upper = _currentAnswer.ToUpperInvariant();
-
-        // 🔒 aynı levelda tekrar submit engeli
         if (_submittedThisLevel.Contains(upper))
         {
-            Debug.Log($"[AnswerManager] \"{upper}\" zaten bu levelda submit edildi. Yoksayılıyor.");
+            Debug.Log($"[AnswerManager] \"{upper}\" zaten bu levelda submit edildi.");
             return;
         }
 
-        // kayıt altına al
         _submittedThisLevel.Add(upper);
 
-        Debug.Log($"SUBMIT: \"{_currentAnswer}\"");
-
-        // 🔴 Puanı ekle
         ScoreManager.Instance?.AddWordScore(_currentAnswer);
 
-        // Harfleri tüket ve cevabı sıfırla
         int count = 0;
         var lhm = LetterHolderManager.Instance;
-        if (lhm != null && lhm.holders != null)
+        if (lhm?.holders != null)
         {
             foreach (var h in lhm.holders)
             {
                 if (h == null || !h.IsOccupied || h.Current == null) break;
                 count++;
             }
-            // Projende ConsumeFromStart varsa onu kullan; yoksa ClearAllHoldersImmediate çağır.
+
             if (count > 0)
             {
-                if (lhm.GetType().GetMethod("ConsumeFromStart") != null)
-                    lhm.ConsumeFromStart(count);
+                if (lhm.GetType().GetMethod("ConsumeFromStartAnimated") != null)
+                {
+                    lhm.ConsumeFromStartAnimated(count, dur: 0.28f, onComplete: null);
+                }
                 else
-                    lhm.ClearAllHoldersImmediate();
+                {
+                    lhm.ConsumeFromStart(count);
+                    BoardManager.Instance?.CheckEndAfterSubmit();
+                }
             }
+            else BoardManager.Instance?.CheckEndAfterSubmit();
         }
 
         SetAnswer("", false);
-        BoardManager.Instance?.CheckEndAfterSubmit();
-    }
-    public bool IsAlreadySubmittedThisLevel(string word)
-    {
-        if (string.IsNullOrEmpty(word)) return false;
-        return _submittedThisLevel != null && _submittedThisLevel.Contains(word.ToUpperInvariant());
     }
 
-    public void ForceNotify()
-    {
-        OnAnswerChanged?.Invoke(_currentAnswer, _isCurrentValid);
-    }
+    public bool IsAlreadySubmittedThisLevel(string word)
+        => !string.IsNullOrEmpty(word) && _submittedThisLevel.Contains(word.ToUpperInvariant());
+
+    public void ForceNotify() => OnAnswerChanged?.Invoke(_currentAnswer, _isCurrentValid);
 }

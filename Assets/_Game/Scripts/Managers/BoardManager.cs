@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using Helpers;
 
@@ -12,32 +13,30 @@ public class BoardManager : Singleton<BoardManager>
     [SerializeField] private List<int> openTileIds = new();
     [SerializeField] private List<int> closedTileIds = new();
 
-    private LevelData _level;
-    private List<TileViewController> _views;   // 🔴 index == tileIndex
-    private Dictionary<int, int> _idToIndex;
+    LevelData _level;
+    List<TileViewController> _views;     
+    Dictionary<int, int> _idToIndex;
 
-    private int[] _indegree;
-    private bool[] _alive;
-    private List<int>[] _blocks;
+    int[] _indegree;
+    bool[] _alive;
+    List<int>[] _blocks;
 
-    private readonly HashSet<int> _picked = new();
-    private readonly HashSet<int> _inFlight = new();
+    readonly HashSet<int> _picked = new();
+    readonly HashSet<int> _inFlight = new();
 
+    enum Mode { A, B, Geometric }
+    Mode _mode;
 
+    bool _winTriggered = false;
 
-    private enum Mode { A, B, Geometric }
-    private Mode _mode;
-
-    public void Initialize(LevelData level,
-                           List<TileViewController> tileViews,
-                           Dictionary<int, int> idToIndex)
+    // ---------------- API ----------------
+    public void Initialize(LevelData level, List<TileViewController> tileViews, Dictionary<int, int> idToIndex)
     {
         _level = level;
-        _views = tileViews;   // 🔴 artık index == tileIndex
+        _views = tileViews;
         _idToIndex = idToIndex;
 
         int n = _level.tiles.Length;
-
         _indegree = ComputeIndegreeAndMode(_level, _idToIndex, overlapDx, overlapDy, out _mode);
         _blocks = BuildBlocksGraph(_level, _idToIndex, _mode, overlapDx, overlapDy);
 
@@ -46,16 +45,15 @@ public class BoardManager : Singleton<BoardManager>
 
         _picked.Clear();
         _inFlight.Clear();
+        _winTriggered = false;
 
         RefreshAllOpenStates();
         RefreshDebugLists();
     }
 
-    // --- Tile lifecycle ---
-
     public void OnTilePickingBegin(int tileIndex)
     {
-        if (!IsValidIndex(tileIndex) || !_alive[tileIndex]) return;
+        if (!Valid(tileIndex) || !_alive[tileIndex]) return;
 
         _alive[tileIndex] = false;
         _picked.Add(tileIndex);
@@ -63,18 +61,17 @@ public class BoardManager : Singleton<BoardManager>
 
         var list = _blocks[tileIndex];
         if (list != null)
-            for (int k = 0; k < list.Count; k++)
-                _indegree[list[k]] = Mathf.Max(0, _indegree[list[k]] - 1);
-
-        if (list != null)
+        {
+            for (int k = 0; k < list.Count; k++) _indegree[list[k]] = Mathf.Max(0, _indegree[list[k]] - 1);
             for (int k = 0; k < list.Count; k++) ApplyOpenState(list[k]);
+        }
 
         RefreshDebugLists();
     }
 
     public void OnTilePickCanceled(int tileIndex)
     {
-        if (!IsValidIndex(tileIndex) || !_inFlight.Contains(tileIndex)) return;
+        if (!Valid(tileIndex) || !_inFlight.Contains(tileIndex)) return;
 
         _inFlight.Remove(tileIndex);
         _picked.Remove(tileIndex);
@@ -85,7 +82,7 @@ public class BoardManager : Singleton<BoardManager>
 
     public void OnTileReturned(int tileIndex)
     {
-        if (!IsValidIndex(tileIndex)) return;
+        if (!Valid(tileIndex)) return;
 
         _inFlight.Remove(tileIndex);
         _picked.Remove(tileIndex);
@@ -105,18 +102,22 @@ public class BoardManager : Singleton<BoardManager>
             if (!_alive[i]) continue;
             var list = _blocks[i];
             if (list == null) continue;
-            for (int k = 0; k < list.Count; k++)
-                _indegree[list[k]]++;
+            for (int k = 0; k < list.Count; k++) _indegree[list[k]]++;
         }
 
         RefreshAllOpenStates();
         RefreshDebugLists();
     }
 
+
     public void CheckEndAfterSubmit()
     {
-        if (IsBoardEmpty())
-            GameFlowManager.Instance?.OnLevelCompletedNoTiles();
+        if (_winTriggered) return;
+
+        if (IsBoardEmpty() || !ExistsAnyValidWordFromOpenTiles())
+        {
+            TriggerWin();
+        }
     }
 
     public bool IsBoardEmpty()
@@ -126,34 +127,102 @@ public class BoardManager : Singleton<BoardManager>
         return true;
     }
 
-    // --- Open/Close ---
+    void TriggerWin()
+    {
+        if (_winTriggered) return;
+        _winTriggered = true;
 
-    private void RefreshAllOpenStates()
+        // Holder’ları temizle + cursor sıfırla
+        LetterHolderManager.Instance?.ResetAll();
+
+        // Tek yerden kazanma akışı
+        GameFlowManager.Instance?.OnLevelCompletedNoTiles();
+    }
+
+    // ---------------- AutoSolver-vari kontrol ----------------
+    bool ExistsAnyValidWordFromOpenTiles()
+    {
+        var am = AnswerManager.Instance;
+        if (am == null) return false;
+
+        var openTiles = GetOpenTilesSnapshot();
+        if (openTiles.Count == 0) return false;
+
+        // Açık taşların harf listesi (aynı harf birden fazla olabilir)
+        var letters = new List<char>(openTiles.Count);
+        foreach (var v in openTiles) letters.Add(char.ToUpperInvariant(v.letter));
+
+        var used = new bool[letters.Count];
+        var sb = new StringBuilder(letters.Count);
+
+        bool Dfs()
+        {
+            string cur = sb.ToString();
+
+            if (cur.Length > 0 && !am.IsPrefix(cur)) return false;
+
+            if (cur.Length >= am.MinWordLength && am.IsWord(cur)) return true;
+
+            for (int i = 0; i < letters.Count; i++)
+            {
+                if (used[i]) continue;
+                used[i] = true;
+                sb.Append(letters[i]);
+
+                if (Dfs()) return true;
+
+                used[i] = false;
+                sb.Length -= 1;
+            }
+            return false;
+        }
+
+        return Dfs();
+    }
+
+    public List<TileViewController> GetOpenTilesSnapshot()
+    {
+        var result = new List<TileViewController>();
+        if (_views == null || _alive == null || _indegree == null) return result;
+
+        for (int i = 0; i < _views.Count; i++)
+        {
+            if (!_alive[i]) continue;
+            if (_picked.Contains(i)) continue;
+            if (_indegree[i] != 0) continue;
+
+            var v = _views[i];
+            if (!v) continue;
+
+            result.Add(v);
+        }
+        return result;
+    }
+
+    // ---------------- Open/Close ----------------
+    void RefreshAllOpenStates()
     {
         if (_views == null) return;
         for (int i = 0; i < _views.Count; i++) ApplyOpenState(i);
     }
 
-    private void ApplyOpenState(int tileIndex)
+    void ApplyOpenState(int tileIndex)
     {
-        if (!IsValidIndex(tileIndex)) return;
+        if (!Valid(tileIndex)) return;
+
         var view = _views[tileIndex];
-        if (!view) return;
-        if (_picked.Contains(tileIndex)) return;
-        if (!_alive[tileIndex]) return;
+        if (!view || _picked.Contains(tileIndex) || !_alive[tileIndex]) return;
 
         bool shouldOpen = _indegree[tileIndex] == 0;
 
-        // İlk kez görüyorsak: animasyonsuz gerçek state ver
-        if (view.IsCurrentlyOpen == null)
+        if (view.IsCurrentlyOpen is null)
         {
             view.IsCurrentlyOpen = shouldOpen;
             view.SetOpen(shouldOpen);
             return;
         }
 
-        // Sonraki refresh’lerde sadece değişirse animasyon
-        if (view.IsCurrentlyOpen.Value != shouldOpen)
+        if (view.IsCurrentlyOpen != shouldOpen)
         {
             view.IsCurrentlyOpen = shouldOpen;
             if (shouldOpen) view.AnimateOpen();
@@ -161,10 +230,9 @@ public class BoardManager : Singleton<BoardManager>
         }
     }
 
+    bool Valid(int i) => _views != null && i >= 0 && i < _views.Count;
 
-    private bool IsValidIndex(int i) => _views != null && i >= 0 && i < _views.Count;
-
-    private void RefreshDebugLists()
+    void RefreshDebugLists()
     {
         openTileIds.Clear();
         closedTileIds.Clear();
@@ -181,10 +249,8 @@ public class BoardManager : Singleton<BoardManager>
 #endif
     }
 
-    // --- Graph / mode ---
-
-    private int[] ComputeIndegreeAndMode(LevelData level, Dictionary<int, int> idToIndex,
-                                         float dx, float dy, out Mode mode)
+    // ---------------- Graph ----------------
+    int[] ComputeIndegreeAndMode(LevelData level, Dictionary<int, int> idToIndex, float dx, float dy, out Mode mode)
     {
         int n = level.tiles.Length;
         var indegA = new int[n];
@@ -237,8 +303,7 @@ public class BoardManager : Singleton<BoardManager>
         mode = Mode.Geometric; return indegG;
     }
 
-    private List<int>[] BuildBlocksGraph(LevelData level, Dictionary<int, int> idToIndex,
-                                         Mode mode, float dx, float dy)
+    List<int>[] BuildBlocksGraph(LevelData level, Dictionary<int, int> idToIndex, Mode mode, float dx, float dy)
     {
         int n = level.tiles.Length;
         var blocks = new List<int>[n];
@@ -251,40 +316,44 @@ public class BoardManager : Singleton<BoardManager>
                 var t = level.tiles[i];
                 if (t.children == null) continue;
                 foreach (var childId in t.children)
-                    if (idToIndex.TryGetValue(childId, out int ci))
-                        blocks[i].Add(ci);
+                    if (idToIndex.TryGetValue(childId, out int ci)) blocks[i].Add(ci);
             }
+            return blocks;
         }
-        else if (mode == Mode.B)
+
+        if (mode == Mode.B)
         {
             for (int i = 0; i < n; i++)
             {
                 var t = level.tiles[i];
                 if (t.children == null) continue;
                 foreach (var parentId in t.children)
-                    if (idToIndex.TryGetValue(parentId, out int pi))
-                        blocks[pi].Add(i);
+                    if (idToIndex.TryGetValue(parentId, out int pi)) blocks[pi].Add(i);
             }
+            return blocks;
         }
-        else // geometric
+
+        // geometric
+        for (int i = 0; i < n; i++)
         {
-            for (int i = 0; i < n; i++)
+            var a = level.tiles[i];
+            for (int j = 0; j < n; j++)
             {
-                var a = level.tiles[i];
-                for (int j = 0; j < n; j++)
+                if (i == j) continue;
+                var b = level.tiles[j];
+                if (b.position.z >= a.position.z) continue;
+                if (Mathf.Abs(a.position.x - b.position.x) <= dx &&
+                    Mathf.Abs(a.position.y - b.position.y) <= dy)
                 {
-                    if (i == j) continue;
-                    var b = level.tiles[j];
-                    if (b.position.z >= a.position.z) continue; // b üstte ise b.z < a.z
-                    if (Mathf.Abs(a.position.x - b.position.x) <= dx &&
-                        Mathf.Abs(a.position.y - b.position.y) <= dy)
-                    {
-                        blocks[j].Add(i); // aynen kalsın: b (üstte) i (altta) bloklar
-                    }
+                    blocks[j].Add(i); // b (üstte) i (altta) bloklar
                 }
             }
         }
-
         return blocks;
+    }
+    public TileViewController GetViewByTileIndex(int tileIndex)
+    {
+        if (_views == null || tileIndex < 0 || tileIndex >= _views.Count) return null;
+        return _views[tileIndex];
     }
 }

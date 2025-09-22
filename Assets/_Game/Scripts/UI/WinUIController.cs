@@ -9,11 +9,11 @@ public class WinUIController : UIController<WinUIController>
     [Header("UI Refs")]
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private TMP_Text scoreText;
-    [SerializeField] private Button menuButton;          // Artık "Menu" butonu
+    [SerializeField] private Button menuButton;          
 
     [Header("Main Menu")]
-    [SerializeField] private GameObject mainMenuPanel;   // Ana menü panel
-    [SerializeField] private CanvasGroup mainMenuCanvas; // (opsiyonel)
+    [SerializeField] private GameObject mainMenuPanel;   
+    [SerializeField] private CanvasGroup mainMenuCanvas; 
 
     [Header("FX (opsiyonel)")]
     [SerializeField] private ParticleSystem[] highScoreFX;
@@ -23,13 +23,10 @@ public class WinUIController : UIController<WinUIController>
 
     protected override void Awake()
     {
-        base.Awake(); // _canvas ve _group burada ayarlanıyor
+        base.Awake(); 
         if (menuButton) menuButton.onClick.AddListener(OnMenuClicked);
     }
 
-    /// <summary>
-    /// Kazanma ekranını skor ve highscore bilgileriyle gösterir.
-    /// </summary>
     public void ShowWin(int totalScore, bool isNewHigh, int nextLevelNumber)
     {
         _pendingNextLevel = nextLevelNumber;
@@ -40,11 +37,7 @@ public class WinUIController : UIController<WinUIController>
         if (scoreText)
             scoreText.text = $"Score: {totalScore}";
 
-        // ✅ High Score / Level kilidi artık GameFlowManager tarafından yazılıyor.
-        // Burada sadece efekt ve UI açma işlemleri yapılır.
-
-
-        Show(); // UIController.Show()
+        Show(); 
         if (isNewHigh) TriggerParticles(highScoreFX);
         else TriggerParticles(normalEndFX);
     }
@@ -52,14 +45,11 @@ public class WinUIController : UIController<WinUIController>
 
     private void OnMenuClicked()
     {
-        // Skor/holder temizliği
         ScoreManager.Instance?.ResetScore();
         LetterHolderManager.Instance?.ClearAllHoldersImmediate();
 
-        // Win paneli kapat
         Hide();
 
-        // Ana menüyü aç
         if (mainMenuCanvas)
         {
             mainMenuCanvas.alpha = 1f;

@@ -11,9 +11,9 @@ public class LevelData
 public class TileData
 {
     public int id;
-    public Position position; // {x,y,z}
-    public String character;    // harf
-    public int[] children;    // bu taþýn engelledikleri (kapama iliþkisi)
+    public Position position; 
+    public String character;    
+    public int[] children;   
 }
 
 [Serializable]

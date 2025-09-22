@@ -8,7 +8,7 @@ public class ScoreText : MonoBehaviour
     void OnEnable()
     {
         ScoreManager.Instance.OnScoreChanged += HandleScore;
-        HandleScore(ScoreManager.Instance.TotalScore); // anýnda güncelle
+        HandleScore(ScoreManager.Instance.TotalScore); 
     }
 
     void OnDisable()

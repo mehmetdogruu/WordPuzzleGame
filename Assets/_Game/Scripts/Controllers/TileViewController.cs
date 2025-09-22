@@ -2,7 +2,7 @@
 using TMPro;
 using UnityEngine.UI;
 using System;
-using DG.Tweening;   // ✅ DOTween
+using DG.Tweening;
 
 [RequireComponent(typeof(Button))]
 public class TileViewController : MonoBehaviour
@@ -18,25 +18,23 @@ public class TileViewController : MonoBehaviour
     [HideInInspector] public int tileIndex;
     [HideInInspector] public char letter;
 
-    public Action<TileViewController> OnClicked; // LevelManager set edecek
+    public Action<TileViewController> OnClicked;
 
-    private RectTransform _rect;
-    private Sequence _flipSeq;
-    [SerializeField] private float flipTime = 0.15f;
+    RectTransform _rect;
+    Sequence _flipSeq;
+    [SerializeField] float flipTime = 0.15f;
 
-    [HideInInspector] public bool? IsCurrentlyOpen;  // en son bilinen state
-
+    public bool? IsCurrentlyOpen;
 
     void Awake()
     {
-        if (!button) button = GetComponent<Button>();
-        if (!letterText) letterText = GetComponentInChildren<TextMeshProUGUI>(true);
-        if (!_rect) _rect = GetComponent<RectTransform>();
+        button = button ? button : GetComponent<Button>();
+        letterText = letterText ? letterText : GetComponentInChildren<TextMeshProUGUI>(true);
+        _rect = _rect ? _rect : GetComponent<RectTransform>();
 
         button.onClick.AddListener(() =>
         {
-            if (button.interactable)
-                OnClicked?.Invoke(this);
+            if (button.interactable) OnClicked?.Invoke(this);
         });
     }
 
@@ -53,16 +51,14 @@ public class TileViewController : MonoBehaviour
             letterText.enabled = true;
             letterText.gameObject.SetActive(true);
         }
-        if (scoreText && ScoreManager.InstanceExists)
+        if (scoreText && ScoreManager.Instance!=null)
         {
-            int point = ScoreManager.Instance.ComputeWordScore(ch.ToString());
-            scoreText.text = point.ToString();
+            scoreText.text = ScoreManager.Instance.ComputeWordScore(ch.ToString()).ToString();
             scoreText.enabled = true;
             scoreText.gameObject.SetActive(true);
         }
     }
 
-    /// <summary>Animasyonsuz aç / kapa (eski kullanım için)</summary>
     public void SetOpen(bool isOpen)
     {
         if (frontFace) frontFace.SetActive(isOpen);
@@ -74,37 +70,28 @@ public class TileViewController : MonoBehaviour
         if (cg) cg.blocksRaycasts = isOpen;
     }
 
-    /// <summary>Açılış animasyonu: Y scale 1→0→1</summary>
     public void AnimateOpen()
     {
-        if (_flipSeq != null && _flipSeq.IsActive()) _flipSeq.Kill();
-        _flipSeq = DOTween.Sequence();
-        _flipSeq.Append(_rect.DOScaleY(0f, flipTime).SetEase(Ease.InQuad))
-                .AppendCallback(() =>
-                {
-                    SetOpen(true); // yüzleri değiştir
-                })
-                .Append(_rect.DOScaleY(1f, flipTime).SetEase(Ease.OutQuad));
+        if (_flipSeq?.IsActive() == true) _flipSeq.Kill();
+        _flipSeq = DOTween.Sequence()
+            .Append(_rect.DOScaleY(0f, flipTime).SetEase(Ease.InQuad))
+            .AppendCallback(() => SetOpen(true))
+            .Append(_rect.DOScaleY(1f, flipTime).SetEase(Ease.OutQuad));
     }
 
-    /// <summary>Kapanış animasyonu: Y scale 1→0→1</summary>
     public void AnimateClose()
     {
-        if (_flipSeq != null && _flipSeq.IsActive()) _flipSeq.Kill();
-        _flipSeq = DOTween.Sequence();
-        _flipSeq.Append(_rect.DOScaleY(0f, flipTime).SetEase(Ease.InQuad))
-                .AppendCallback(() =>
-                {
-                    SetOpen(false);
-                })
-                .Append(_rect.DOScaleY(1f, flipTime).SetEase(Ease.OutQuad));
+        if (_flipSeq?.IsActive() == true) _flipSeq.Kill();
+        _flipSeq = DOTween.Sequence()
+            .Append(_rect.DOScaleY(0f, flipTime).SetEase(Ease.InQuad))
+            .AppendCallback(() => SetOpen(false))
+            .Append(_rect.DOScaleY(1f, flipTime).SetEase(Ease.OutQuad));
     }
 
     public void SetRaycastEnabled(bool enabled)
     {
         if (canvasGroup) canvasGroup.blocksRaycasts = enabled;
 
-        // CanvasGroup yoksa garanti olsun diye:
         var graphics = GetComponentsInChildren<Graphic>(true);
         foreach (var g in graphics) g.raycastTarget = enabled;
     }

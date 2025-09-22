@@ -32,11 +32,9 @@ public class LetterHolderController : MonoBehaviour, IPointerClickHandler
         Current = Incoming;
         Incoming = null;
 
-        // 🔴 Holder üstündeki tile raycast'ini kapat
         if (Current != null && Current.view != null)
             Current.view.SetRaycastEnabled(false);
     }
-
 
     public void CancelIncoming()
     {
@@ -56,11 +54,15 @@ public class LetterHolderController : MonoBehaviour, IPointerClickHandler
         return local;
     }
 
-    // <-- holder’a tıklanınca yöneticiyi haberdar et
     public void OnPointerClick(PointerEventData eventData)
     {
         if (!IsOccupied) return;
+
         var mgr = LetterHolderManager.Instance;
-        if (mgr != null) mgr.OnHolderClicked(this);   // 🔴 index değil, REFERANS gönderiyoruz
+        if (mgr == null) return;
+
+        if (mgr.InputLocked) return;
+
+        mgr.OnHolderClicked(this);
     }
 }

@@ -33,10 +33,10 @@ RectTransform:
   m_Father: {fileID: 3055451814298835933}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.0673011, y: 0.546}
-  m_AnchorMax: {x: 0.2726989, y: 0.8906555}
-  m_AnchoredPosition: {x: -1.875, y: -0.42489624}
-  m_SizeDelta: {x: 2.0742035, y: 1.1108017}
+  m_AnchorMin: {x: 0.021000002, y: 0.5892201}
+  m_AnchorMax: {x: 0.63100004, y: 0.8906555}
+  m_AnchoredPosition: {x: -1.2601624, y: -0.98059845}
+  m_SizeDelta: {x: 5.8317986, y: 2.2210999}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &3055451814216361711
 CanvasRenderer:
@@ -66,7 +66,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: LEVEL1
+  m_text: LEVEL 14 - FARMING & AGRICULTURE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c0b3f97acf032a743bdf3de44e4a9828, type: 2}
   m_sharedMaterial: {fileID: 1698618626366630908, guid: c0b3f97acf032a743bdf3de44e4a9828, type: 2}
@@ -75,8 +75,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4294947620
+  m_fontColor: {r: 0.1415093, g: 0.7010354, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -93,8 +93,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 30.96
+  m_fontSizeBase: 30.96
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -523,10 +523,10 @@ RectTransform:
   m_Father: {fileID: 3055451814298835933}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.0673011, y: 0.163}
-  m_AnchorMax: {x: 0.53969896, y: 0.5}
-  m_AnchoredPosition: {x: -1.875, y: -1.5}
-  m_SizeDelta: {x: 3.1896057, y: 2.1108017}
+  m_AnchorMin: {x: 0.034, y: 0.163}
+  m_AnchorMax: {x: 0.5331673, y: 0.5}
+  m_AnchoredPosition: {x: -10.260162, y: -4}
+  m_SizeDelta: {x: 10.836599, y: 2.1107998}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &3055451815966816477
 CanvasRenderer:
@@ -583,8 +583,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 29
+  m_fontSizeBase: 29
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

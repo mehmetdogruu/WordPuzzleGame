@@ -11,13 +11,11 @@ public class GamePanelController : UIController<GamePanelController>
     protected override void Awake()
     {
         base.Awake();
-        HideInstant();   // Oyun baþýnda gizli baþlasýn
+        HideInstant();   
         if (exitButton) exitButton.onClick.AddListener(ExitButton);
 
     }
 
-    // UIController.Show / Hide zaten animasyonlu aç-kapa içeriyor
-    // Gerekirse burada ekstra hazýrlýk yapabilirsin.
     public override void Show()
     {
         base.Show();

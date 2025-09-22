@@ -17,19 +17,18 @@ public class MainMenuController : UIController<MainMenuController>
 
     void Start()
     {
-        // ✅ Oyun açılışında ana menü paneli açık
         ShowInstant();
     }
 
     private void OpenLevelPopup()
     {
         Hide();
-        LevelPopupController.Instance?.Open(); // Build + Show
+        LevelPopupController.Instance?.Open(); 
     }
 
     private void CloseLevelPopup()
     {
         LevelPopupController.Instance?.Hide();
-        Show(); // menüye geri dön
+        Show();
     }
 }

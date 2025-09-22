@@ -20,8 +20,18 @@ public class LevelListItem : MonoBehaviour
         _level = levelNumber;
         _onPlay = onPlay;
 
-        if (titleText) titleText.text = title;
-        if (highScoreText) highScoreText.text = highScore > 0 ? $"High Score: {highScore}" : "High Score:";
+        if (titleText)
+        {
+            titleText.text = string.IsNullOrWhiteSpace(title)
+                ? $"LEVEL {levelNumber}"
+                : $"LEVEL {levelNumber} - {title}";
+        }
+
+        if (highScoreText)
+            highScoreText.text = highScore > 0 ? $"High Score: {highScore}" : "High Score:";
+
+        if (lockImage) lockImage.SetActive(isLocked);
+        if (playText) playText.text = isLocked ? "" : "Play";
 
         if (playButton)
         {
@@ -29,10 +39,7 @@ public class LevelListItem : MonoBehaviour
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(() =>
             {
-                // Önce mevcut onPlay callback’i (level yükleme vb.)
                 _onPlay?.Invoke(_level);
-
-                // ✅ Ardından GamePanel’i aç
                 GamePanelController.Instance?.Show();
             });
         }
@@ -40,6 +47,7 @@ public class LevelListItem : MonoBehaviour
 
     public void SetHighScore(int value)
     {
-        if (highScoreText) highScoreText.text = value > 0 ? $"High Score: {value}" : "High Score:";
+        if (highScoreText)
+            highScoreText.text = value > 0 ? $"High Score: {value}" : "High Score:";
     }
 }

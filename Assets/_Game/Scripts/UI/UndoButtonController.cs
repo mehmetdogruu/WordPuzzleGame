@@ -22,7 +22,7 @@ public class UndoButtonController : MonoBehaviour
         if (useCanvasGroup)
             _cg = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
 
-        ApplyState(false); // başlangıçta kapalı
+        ApplyState(false); 
         _btn.onClick.AddListener(OnUndoClicked);
     }
 
@@ -41,7 +41,6 @@ public class UndoButtonController : MonoBehaviour
 
     IEnumerator HookWhenReady()
     {
-        // AnswerManager ve LetterHolderManager hazır olana kadar kısa bekleyelim
         float t = 0f;
         while ((AnswerManager.Instance == null || LetterHolderManager.Instance == null) && t < 1f)
         {
@@ -52,19 +51,16 @@ public class UndoButtonController : MonoBehaviour
         var am = AnswerManager.Instance;
         if (am == null) yield break;
 
-        // Holder durumu değiştikçe AnswerManager zaten RecomputeCurrentAnswer çağırıyor
-        // → OnAnswerChanged üzerinden burayı güncelleyebiliriz.
+
         am.OnAnswerChanged -= HandleAnswerChanged;
         am.OnAnswerChanged += HandleAnswerChanged;
 
-        // İlk durumu elle tetikle
         HandleAnswerChanged(am.CurrentAnswer, am.IsCurrentValid);
         _hooked = true;
     }
 
     void HandleAnswerChanged(string _, bool __)
     {
-        // En az bir holder doluysa Undo aktif olsun
         bool canUndo = LetterHolderManager.Instance != null && LetterHolderManager.Instance.HasAnyOccupied();
         ApplyState(canUndo);
     }
@@ -84,7 +80,5 @@ public class UndoButtonController : MonoBehaviour
     void OnUndoClicked()
     {
         LetterHolderManager.Instance?.UndoLastMove();
-        // Undo sonrası AnswerManager zaten Recompute ediyor; 
-        // OnAnswerChanged tetiklenince buton state’i kendini güncelleyecek.
     }
 }

@@ -5,8 +5,7 @@ namespace UISystem
 {
     public class UIController<T> : Helpers.Singleton<T> where T : MonoBehaviour
     {
-        //protected Canvas _canvas;          // sadece referans (tek canvas mimarisi: asla enable/disable etme)
-        protected CanvasGroup _group;      // panel kökündeki CanvasGroup
+        protected CanvasGroup _group;    
 
         [Header("UI Controller Defaults")]
         [SerializeField] protected GameObject globalBackground;
@@ -19,37 +18,30 @@ namespace UISystem
         [SerializeField] protected float hideFadeTime = 0.15f;
         [SerializeField] protected Ease showEase = Ease.OutQuad;
         [SerializeField] protected Ease hideEase = Ease.InQuad;
-        [SerializeField] protected bool scalePunch = false;   // istersen küçük bir scale anim
+        [SerializeField] protected bool scalePunch = false;   
 
         protected virtual void Awake()
         {
-            // Tek canvas mimarisi: ebeveynden canvas’ý REFERANS olarak bul (dokunmayacaðýz)
-           // _canvas = GetComponentInParent<Canvas>(true);
 
-            // Panel köküne CanvasGroup koy (yoksa ekle)
             _group = GetComponent<CanvasGroup>();
             if (_group == null) _group = gameObject.AddComponent<CanvasGroup>();
 
-            // Baþlangýçta gizli kalsýn
-            //HideInstant();
+
         }
 
         public virtual void Show()
         {
 
-            // önce hazýr state
             _group.DOKill();
             _group.alpha = 0f;
             _group.interactable = false;
             _group.blocksRaycasts = false;
 
-            // fade in
             _group
                 .DOFade(1f, showFadeTime)
                 .SetEase(showEase)
                 .OnComplete(() =>
                 {
-                    // DOTween callback: null guard
                     if (_group != null)
                     {
                         _group.interactable = true;
@@ -74,7 +66,6 @@ namespace UISystem
 
         public virtual void Hide()
         {
-            // interactivity kapat, fade out
             _group.DOKill();
             _group.interactable = false;
             _group.blocksRaycasts = false;
